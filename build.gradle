@@ -1,27 +1,26 @@
 buildscript {
     ext {
-        springBootVersion = '2.0.0.RELEASE'
+        springBootVersion = '2.0.5.RELEASE'
     }
     repositories {
         mavenCentral()
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
-	classpath("io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE")
+		classpath("io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE")
     }
 }
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
-apply plugin: 'spring-boot'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
 
-jar {
+bootJar {
     baseName = 'scheduler-worker'
     version = '0.0.1-SNAPSHOT'
 }
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -30,15 +29,21 @@ repositories {
     }
 }
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 dependencies {
+
+    testCompile("org.springframework.boot:spring-boot-starter-test")
     compile('org.springframework.boot:spring-boot-starter')
+    compile('org.springframework.boot:spring-boot-starter-amqp')
     compile('org.springframework.boot:spring-boot-devtools')
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-
     compile 'com.rethinkdb:rethinkdb-driver:2.2-b1-SNAPSHOT'
-    testCompile('org.springframework.boot:spring-boot-starter-test')
-}
+    compile "com.rabbitmq:http-client:2.1.0.RELEASE"
+//	compile "org.apache.httpcomponents:httpclient:4.5.5"
 
+}
 
 eclipse {
     classpath {
@@ -47,6 +52,4 @@ eclipse {
     }
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.9'
-}
+
