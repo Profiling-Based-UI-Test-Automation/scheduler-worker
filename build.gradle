@@ -41,7 +41,7 @@ dependencies {
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     compile 'com.rethinkdb:rethinkdb-driver:2.2-b1-SNAPSHOT'
     compile "com.rabbitmq:http-client:2.1.0.RELEASE"
-//	compile "org.apache.httpcomponents:httpclient:4.5.5"
+	compile "org.apache.httpcomponents:httpclient:4.5.5"
 
 }
 
