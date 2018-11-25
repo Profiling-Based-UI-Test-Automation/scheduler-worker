@@ -22,11 +22,9 @@ public class DeviceAvailabilityChangesListener {
 
     @Async
     public void registerDeviceListener(Object serial) {
-    	
     	Cursor changeCursor = r.db("stf").table("devices").filter(row -> row.g("serial").eq(serial)).pluck("owner").changes().run(connectionFactory.createConnection());//.g("serial")
     	
     	for (Object change : changeCursor) {
-    		
     		if( change!= null && change.toString().startsWith("owner=null") ){
     			// queue에서 test를 꺼내 컨테이너를 생성해 태운다.
     			System.out.println(change);

@@ -1,22 +1,30 @@
 package scheduler.db;
 
 import com.rethinkdb.RethinkDB;
+import org.springframework.amqp.core.Queue;
 
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.net.ConnectionInstance;
 import com.rethinkdb.net.Cursor;
 
+import scheduler.db.RabbitMQManagement;
+
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.core.RabbitManagementTemplate;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class SchedulerInitializer implements InitializingBean {
     @Autowired
     private RethinkDBConnectionFactory connectionFactory;
+    
+    @Autowired
+    private RabbitMQManagement rabbitmq ;
 
     @Autowired
     private DeviceAvailabilityChangesListener deviceAvailabilityChangesListener;
@@ -24,15 +32,40 @@ public class SchedulerInitializer implements InitializingBean {
     private static final RethinkDB r = RethinkDB.r;
     
     private static List<String> listenerlist = new ArrayList<String>();
+    
+    
+    @Scheduled(fixedRate = 10000, initialDelay = 20000)
+    public void scheduleTaskWithFixedRate() {
+        Connection<ConnectionInstance> connection = connectionFactory.createConnection();
+        List<String> dbList = r.dbList().run(connection);
+         if(dbList.contains("stf")) {
+        	List<String> tables = r.db("stf").tableList().run(connection);
+            
+            if ( tables.contains("devices")) {
+            	Cursor serialList = r.db("stf").table("devices").g("serial").run(connection);
+            	
+            	if(serialList != null)
+	            	for (Object serial : serialList) {
+	            		
+	            		// 연결된 디바이스 중 큐에 등록되지 않은 디바이스를 큐에 등록한다.
+	            		if(!listenerlist.contains(serial)) {
+	            			rabbitmq.addQueue((String) serial);
+	            			//Queue queue = new Queue((String) serial, true, false, false);
+	            			deviceAvailabilityChangesListener.registerDeviceListener(serial);
+	            			listenerlist.add((String) serial);
+	            		}
+	            	}
+            }
+        }
+    }
 
     @Override
     public void afterPropertiesSet() throws Exception {
     	
-    	// 현재 등록된 모든 큐를 가져온다. 
-    	RabbitManagementTemplate rmt = new RabbitManagementTemplate("http://localhost:15672/api/", "guest", "guest");
-
-    	List<Queue> list = rmt.getQueues();
+    	rabbitmq.initialize();
+    	List<Queue> list = rabbitmq.getQueueList();
     	
+    	// 현재 등록된 모든 큐를 가져온다. 	
     	for(int i = 0 ; i < list.size() ; ++ i) {
     		String serial = list.get(i).getName();
     		if( serial != null ) {
@@ -40,11 +73,6 @@ public class SchedulerInitializer implements InitializingBean {
     			listenerlist.add(serial);
     		}
     	}
-    	
-    	System.out.println("====================== list.length = " + list.size());
-    	
-        
-        
     }
 
     //파라미터로 전달된 큐 이름이 stf device에 목록 상에 있는지 확인하고, 있는 경우 서비스를 실행시킨다. 
@@ -58,7 +86,6 @@ public class SchedulerInitializer implements InitializingBean {
             
             if ( tables.contains("devices")) {
             	Cursor serialexist = r.db("stf").table("devices").filter(row -> row.g("serial").eq(serial)).run(connection);
-            	//obj.g("owner");
             	
             	if(serialexist != null)
             		deviceAvailabilityChangesListener.registerDeviceListener(serial);
