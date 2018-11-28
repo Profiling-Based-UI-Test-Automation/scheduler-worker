@@ -29,4 +29,6 @@ public class RethinkDBConfiguration {
     SchedulerInitializer dbInitializer() {
         return new SchedulerInitializer();
     }
+    
+    
 }
